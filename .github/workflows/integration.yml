@@ -1,0 +1,29 @@
+name: Continuous publish
+on:
+  push:
+    branches:
+      - "master"
+    paths:
+      - "src/**/*.kt"
+      - "build.gradle.kts"
+      - "settings.gradle.kts"
+      - "gradle.properties"
+      - "!.gitignore"
+      - "!README.md"
+      - "!README"
+      - "!LICENSE"
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: "NetherRealmSpigot/reusable-actions/Colosseum/Gradle@main"
+        with:
+          build-ref: ${{ github.ref }}
+          maven: ${{ secrets.COLOSSEUM_GRADLE_MAVEN }}
+          maven-username: ${{ secrets.COLOSSEUM_MAVEN_USERNAME }}
+          maven-password: ${{ secrets.COLOSSEUM_MAVEN_PASSWORD }}
