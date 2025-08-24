@@ -12,18 +12,54 @@ on:
       - "!README.md"
       - "!README"
       - "!LICENSE"
+  workflow_dispatch:
+
 
 permissions:
   contents: read
   checks: write
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: "NetherRealmSpigot/reusable-actions/Colosseum/Gradle@main"
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          build-ref: ${{ github.ref }}
-          maven: ${{ secrets.COLOSSEUM_GRADLE_MAVEN }}
-          maven-username: ${{ secrets.COLOSSEUM_MAVEN_USERNAME }}
-          maven-password: ${{ secrets.COLOSSEUM_MAVEN_PASSWORD }}
+          fetch-depth: 0
+
+      - name: Setup Java 8
+        uses: actions/setup-java@v4
+        with:
+          java-version: 8
+          distribution: temurin
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build
+        run: ./gradlew build
+
+      - name: Write test report
+        uses: mikepenz/action-junit-report@v5
+        if: ${{ success() || failure() }}
+        with:
+          report_paths: './build/test-results/test/TEST-*.xml'
+          include_passed: true
+          detailed_summary: true
+          fail_on_failure: true
+          require_tests: true
+          check_name: Test Report (Ref ${{ github.ref }})
+          check_title_template: '{{SUITE_NAME}} | {{TEST_NAME}}'
+
+      - name: Publish plugin
+        run: ./gradlew publish
+        if: ${{ (github.ref_name == 'master' && github.event_name == 'push') || github.event_name == 'workflow_dispatch' }}
+        env:
+          COLOSSEUM_MAVEN_URL: ${{ secrets.COLOSSEUM_GRADLE_MAVEN }}
+          COLOSSEUM_MAVEN_USERNAME: ${{ secrets.COLOSSEUM_MAVEN_USERNAME }}
+          COLOSSEUM_MAVEN_PASSWORD: ${{ secrets.COLOSSEUM_MAVEN_PASSWORD }}
